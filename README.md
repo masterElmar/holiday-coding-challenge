@@ -127,7 +127,7 @@ For a description on the columns take a look at [hotels.md](data/hotels.md).
 ## How do I hand in my project?
 
 Create a private GitHub repository and commit your code there. Provide READ permissions
-to holidaychallenge@check24.de then, so that we can see what you have been building. When you
+to techup@check24.de then, so that we can see what you have been building. When you
 hand in your application for the scholarship on [our scholarship website](https://www.talents.check24.de/techup) include
 the link to your GitHub repository.
 
