@@ -1,4 +1,4 @@
-# CHECK24 GenDev Holiday Challenge
+# CHECK24 TechUp Holiday Challenge
 
 **Note:**
 > "*Summer is coming, let's go on holidays.*"
