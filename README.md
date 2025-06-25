@@ -93,7 +93,7 @@ Rows in our offer dataset will look like this:
 | 223     | 2022-08-26T17:50:00+02:00 | 2022-08-30T10:00:00+02:00 | 2           | 0             | 980   | PMI                     | STR                   | 2022-08-30T12:10:00+02:00 | STR                      | PMI                    | 2022-08-26T19:50:00+02:00 | breakfast | FALSE     | double      |
 | 187     | 2022-08-26T17:50:00+02:00 | 2022-08-30T10:00:00+02:00 | 2           | 0             | 1175  | PMI                     | STR                   | 2022-08-30T12:10:00+02:00 | STR                      | PMI                    | 2022-08-26T19:50:00+02:00 | halfboard | FALSE     | double      |
 
-Every row represents an offer that can be booked by a customer, in total the dataset contains 102667047 rows. Every offer
+Every row represents an offer that can be booked by a customer, in total the dataset contains 92783430 rows. Every offer
 includes two flights (one that takes travellers to their destination and another one that takes travellers back) and a
 hotel room where all travellers will stay. For a description on the columns take a look at [offers.md](data/offers.md).
 
