@@ -74,7 +74,7 @@ We are excited for your solutions.
 We provide you with two datasets (offers and hotels) for this challenge.
 The hotel dataset is part of this repository and can be found [here](data/hotels.csv).
 To get access to the offer dataset write a short email with subject "Holiday Challenge" to [techup@check24.de](mailto:techup@check24.de).
-Within 24 hours you will get a response with your personalized link to download that data.
+Within 24 hours you will get a response with access to the data.
 
 ### Offers
 
