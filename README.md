@@ -12,7 +12,7 @@ day, especially now as summer is coming. Now it's time for you to try that as we
 We provide you with [>100 million real offers](#datasets) for Mallorca that have been sampled randomly from our system.
 Build a simple version of a comparison service that supports users on their search for a trip to Mallorca.  
 You can look at [urlaub.check24.de](https://urlaub.check24.de) for inspiration. Put your project on GitHub and use it to
-apply for the 1st round of the [TechUp Scholarship](https://www.talents.check24.de/techup). 
+apply for the 1st round of the [TechUp Scholarship](https://talents.urlaub.check24.de). 
 Applications are open between 1st of July and 31st of August 2025.
 
 Generally, this problem can be divided into two parts:
@@ -128,7 +128,7 @@ For a description on the columns take a look at [hotels.md](data/hotels.md).
 
 Create a private GitHub repository and commit your code there. Provide READ permissions
 to techup@check24.de then, so that we can see what you have been building. When you
-hand in your application for the scholarship on [our scholarship website](https://www.talents.check24.de/techup) include
+hand in your application for the scholarship on [our scholarship website]([https://talents.urlaub.check24.de]) include
 the link to your GitHub repository.
 
 **What should be included:**
