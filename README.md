@@ -12,7 +12,7 @@ day, especially now as summer is coming. Now it's time for you to try that as we
 We provide you with [>100 million real offers](#datasets) for Mallorca that have been sampled randomly from our system.
 Build a simple version of a comparison service that supports users on their search for a trip to Mallorca.  
 You can look at [urlaub.check24.de](https://urlaub.check24.de) for inspiration. Put your project on GitHub and use it to
-apply for the 1st round of the [TechUp Scholarship](https://talents.urlaub.check24.de). 
+apply for the 1st round of the [TechUp Scholarship](https://talents.urlaub.check24.de/). 
 Applications are open between 1st of July and 31st of August 2025.
 
 Generally, this problem can be divided into two parts:
