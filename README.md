@@ -3,17 +3,17 @@
 **Note:**
 > "*Summer is coming, let's go on holidays.*"
 
-Searching for a nice place to go and planning your next holiday is not just a fun activity for a lazy afternoon - it is
-also an exciting problem to solve in IT. At CHECK24, we search and present billions of offers to our customers every
-day, especially now as summer is coming. Now it's time for you to try that as well 😊☀️
+Planning your next vacation and looking for the perfect destination is not just a fun activity for a lazy afternoon - it is
+also an exciting task for IT. At CHECK24, we search and present billions of offers to our customers every
+day, especially now that summer is just around the corner. Now it's time for you to try it out yourself 😊☀️
 
 ## What is the challenge
 
-We provide you with [>100 million real offers](#datasets) for Mallorca that have been sampled randomly from our system.
-Build a simple version of a comparison service that supports users on their search for a trip to Mallorca.  
-You can look at [urlaub.check24.de](https://urlaub.check24.de) for inspiration. Put your project on GitHub and use it to
+We provide you with [>100 million real offers](#datasets) for Mallorca, randomly selected from our system.
+Build a simple version of a comparison service that helps users find a trip to Mallorca.  
+You can take a look at [urlaub.check24.de](https://urlaub.check24.de) for inspiration. Put your project on GitHub and use it to
 apply for the 1st round of the [TechUp Scholarship](https://talents.urlaub.check24.de/). 
-Applications are open between 1st of July and 31st of August 2025.
+Applications can be submitted between July 1st and August 31, 2025.
 
 Generally, this problem can be divided into two parts:
 
