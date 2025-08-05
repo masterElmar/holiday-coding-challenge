@@ -45,7 +45,7 @@ export default function HomePage() {
     async function load(parameters: Paths.GetBestOffersByHotel.QueryParameters) {
         setQueryParameters(parameters);
         router.push("/?" + GetBestOffersByHotelToQuery(parameters));
-        const api = new OpenAPIClientAxios({definition: 'http://localhost:8090/openapi', withServer: 0})
+        const api = new OpenAPIClientAxios({definition: 'http://localhost:8090/openapi.json', withServer: 0})
         const client = await api.init<Client>()
         const response = await client.getBestOffersByHotel(parameters);
         setOffers(response.data);
