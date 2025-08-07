@@ -92,7 +92,7 @@ func main() {
 	huma.Register(api, huma.Operation{
 		OperationID: "GetHotelOffers",
 		Method:      "GET",
-		Path:        "/hotels/{id}/offers",
+		Path:        "/hotels/{hotelId}/offers",
 		Summary:     "Get hotel offers",
 		Description: "Get available offers for a given hotel",
 		Tags:        []string{"hotels", "offers"},

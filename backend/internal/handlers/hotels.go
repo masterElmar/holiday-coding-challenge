@@ -25,53 +25,11 @@ func NewHotelHandler(storage *storage.MemoryStorage) *HotelHandler {
 	}
 }
 
-// SearchParams für Huma API
-type SearchParams struct {
-	DepartureAirports     []string `query:"departureAirports" doc:"Comma-separated list of departure airports (e.g., FRA,MUC)"`
-	EarliestDepartureDate string   `query:"earliestDepartureDate" doc:"Earliest departure date (YYYY-MM-DD)"`
-	LatestReturnDate      string   `query:"latestReturnDate" doc:"Latest return date (YYYY-MM-DD)"`
-	CountAdults           int      `query:"countAdults" doc:"Number of adults"`
-	CountChildren         int      `query:"countChildren" doc:"Number of children"`
-	Duration              int      `query:"duration" doc:"Trip duration in days"`
-}
-
-// BestHotelOffer entspricht der Frontend-Erwartung
-type BestHotelOffer struct {
-	Hotel                models.Hotel `json:"hotel"`
-	MinPrice             float64      `json:"minPrice"`
-	DepartureDate        string       `json:"departureDate"`
-	ReturnDate           string       `json:"returnDate"`
-	RoomType             string       `json:"roomType,omitempty"`
-	MealType             string       `json:"mealType,omitempty"`
-	CountAdults          int          `json:"countAdults"`
-	CountChildren        int          `json:"countChildren"`
-	Duration             int          `json:"duration"`
-	CountAvailableOffers int          `json:"countAvailableOffers"`
-}
-
-// BestOffersByHotelResponse für Huma API - kompatibel mit Frontend
-type BestOffersByHotelResponse struct {
-	Body []BestHotelOffer `json:"body"`
-}
-
-// HotelOffersResponse für Huma API - kompatibel mit Frontend
-type HotelOffersResponse struct {
-	Body struct {
-		Hotel models.Hotel   `json:"hotel"`
-		Items []models.Offer `json:"items"`
-	} `json:"body"`
-}
-
-// StatsResponse für Huma API
-type StatsResponse struct {
-	Body map[string]interface{} `json:"stats"`
-}
-
 // HumaGetHotelsWithBestOffers - Huma-kompatible Version
 func (h *HotelHandler) HumaGetHotelsWithBestOffers(ctx context.Context, input *struct {
-	SearchParams
-}) (*BestOffersByHotelResponse, error) {
-	params, err := h.convertSearchParams(input.SearchParams)
+	models.ApiSearchParams
+}) (*models.BestOffersByHotelResponse, error) {
+	params, err := h.convertSearchParams(input.ApiSearchParams)
 	if err != nil {
 		return nil, huma.Error400BadRequest("Ungültige Such-Parameter: " + err.Error())
 	}
@@ -79,9 +37,9 @@ func (h *HotelHandler) HumaGetHotelsWithBestOffers(ctx context.Context, input *s
 	hotels := h.storage.GetHotelsWithBestOffers(params)
 
 	// Konvertiere zu Frontend-kompatiblem Format
-	bestOffers := make([]BestHotelOffer, len(hotels))
+	bestOffers := make([]models.BestHotelOffer, len(hotels))
 	for i, hotel := range hotels {
-		bestOffers[i] = BestHotelOffer{
+		bestOffers[i] = models.BestHotelOffer{
 			Hotel:                hotel.Hotel,
 			MinPrice:             hotel.BestOffer.Price,
 			DepartureDate:        hotel.BestOffer.OutboundDepartureDateTime.Format("2006-01-02"),
@@ -95,7 +53,7 @@ func (h *HotelHandler) HumaGetHotelsWithBestOffers(ctx context.Context, input *s
 		}
 	}
 
-	resp := &BestOffersByHotelResponse{}
+	resp := &models.BestOffersByHotelResponse{}
 	resp.Body = bestOffers
 
 	return resp, nil
@@ -103,9 +61,9 @@ func (h *HotelHandler) HumaGetHotelsWithBestOffers(ctx context.Context, input *s
 
 // HumaGetOffersByHotel - Huma-kompatible Version
 func (h *HotelHandler) HumaGetOffersByHotel(ctx context.Context, input *struct {
-	ID int `path:"id" doc:"Hotel ID"`
-	SearchParams
-}) (*HotelOffersResponse, error) {
+	ID int `path:"hotelId" doc:"Hotel ID"`
+	models.ApiSearchParams
+}) (*models.HotelOffersResponse, error) {
 	// Prüfen, ob das Hotel existiert
 	hotel, exists := h.storage.GetHotel(input.ID)
 	if !exists {
@@ -113,7 +71,7 @@ func (h *HotelHandler) HumaGetOffersByHotel(ctx context.Context, input *struct {
 	}
 
 	// Such-Parameter konvertieren
-	params, err := h.convertSearchParams(input.SearchParams)
+	params, err := h.convertSearchParams(input.ApiSearchParams)
 	if err != nil {
 		return nil, huma.Error400BadRequest("Ungültige Such-Parameter: " + err.Error())
 	}
@@ -121,7 +79,7 @@ func (h *HotelHandler) HumaGetOffersByHotel(ctx context.Context, input *struct {
 	// Angebote für das Hotel abrufen
 	offers := h.storage.GetOffersByHotel(input.ID, params)
 
-	resp := &HotelOffersResponse{}
+	resp := &models.HotelOffersResponse{}
 	resp.Body.Hotel = *hotel // Dereferenziere den Pointer
 	resp.Body.Items = offers
 
@@ -129,17 +87,17 @@ func (h *HotelHandler) HumaGetOffersByHotel(ctx context.Context, input *struct {
 }
 
 // HumaGetStats - Huma-kompatible Version
-func (h *HotelHandler) HumaGetStats(ctx context.Context, input *struct{}) (*StatsResponse, error) {
+func (h *HotelHandler) HumaGetStats(ctx context.Context, input *struct{}) (*models.StatsResponse, error) {
 	stats := h.storage.GetStats()
 
-	resp := &StatsResponse{}
+	resp := &models.StatsResponse{}
 	resp.Body = stats
 
 	return resp, nil
 }
 
 // convertSearchParams konvertiert Huma SearchParams zu models.SearchParams
-func (h *HotelHandler) convertSearchParams(params SearchParams) (models.SearchParams, error) {
+func (h *HotelHandler) convertSearchParams(params models.ApiSearchParams) (models.SearchParams, error) {
 	var result models.SearchParams
 
 	// Departure Airports
