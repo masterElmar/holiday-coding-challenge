@@ -42,8 +42,8 @@ func (h *HotelHandler) HumaGetHotelsWithBestOffers(ctx context.Context, input *s
 		bestOffers[i] = models.BestHotelOffer{
 			Hotel:                hotel.Hotel,
 			MinPrice:             hotel.BestOffer.Price,
-			DepartureDate:        hotel.BestOffer.OutboundDepartureDateTime.Format("2006-01-02"),
-			ReturnDate:           hotel.BestOffer.InboundDepartureDateTime.Format("2006-01-02"),
+			DepartureDate:        hotel.BestOffer.OutboundArrivalDateTime.Format("2006-01-02"),
+			ReturnDate:           hotel.BestOffer.InboundArrivalDateTime.Format("2006-01-02"),
 			RoomType:             "", // TODO: Falls verfügbar in Offer-Struktur
 			MealType:             "", // TODO: Falls verfügbar in Offer-Struktur
 			CountAdults:          hotel.BestOffer.CountAdults,

@@ -4,7 +4,9 @@ go 1.24.5
 
 require (
 	github.com/danielgtaylor/huma/v2 v2.34.1
+	github.com/gocql/gocql v1.7.0
 	github.com/gofiber/fiber/v2 v2.52.7
+
 )
 
 require (
@@ -21,4 +23,7 @@ require (
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.64.0 // indirect
 	golang.org/x/sys v0.34.0 // indirect
+	gopkg.in/inf.v0 v0.9.1 // indirect
 )
+
+replace github.com/gocql/gocql => github.com/scylladb/gocql v1.15.2

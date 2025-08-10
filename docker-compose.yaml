@@ -1,0 +1,64 @@
+version: '3.9'
+
+services:
+  scylla:
+    image: scylladb/scylla:6.1
+    container_name: scylla
+    command: ["--smp", "2", "--memory", "2G", "--overprovisioned", "1"]
+    ports:
+      - "9042:9042"   # CQL
+      - "9180:9180"   # Metrics/REST
+    volumes:
+      - scylla-data:/var/lib/scylla
+    healthcheck:
+      test: ["CMD", "cqlsh", "-e", "DESCRIBE KEYSPACES"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  scylla-init:
+    image: scylladb/scylla:6.1
+    container_name: scylla-init
+    depends_on:
+      scylla:
+        condition: service_healthy
+    volumes:
+      - ./infra/scylla:/cql:ro
+    entrypoint: ["bash", "-lc"]
+    command: >-
+      "cqlsh scylla 9042 -f /cql/schema.cql && 
+       echo 'Schema created'"
+    restart: "no"
+
+  scylla-load-hotels:
+    image: scylladb/scylla:6.1
+    container_name: scylla-load-hotels
+    depends_on:
+      scylla-init:
+        condition: service_completed_successfully
+    volumes:
+      - ./infra/scylla:/cql:ro
+      - ./data:/data:ro
+    entrypoint: ["bash", "-lc"]
+    command: >-
+      "cqlsh scylla 9042 -f /cql/load_hotels.cql"
+    restart: "no"
+
+  # Optional: very large import (~90M rows). Enable and run intentionally.
+  # scylla-load-offers:
+  #   image: scylladb/scylla:6.1
+  #   container_name: scylla-load-offers
+  #   depends_on:
+  #     scylla-init:
+  #       condition: service_completed_successfully
+  #   volumes:
+  #     - ./infra/scylla:/cql:ro
+  #     - ./data:/data:ro
+  #   entrypoint: ["bash", "-lc"]
+  #   command: >-
+  #     "cqlsh scylla 9042 -f /cql/load_offers.cql"
+  #   restart: "no"
+
+volumes:
+  scylla-data:
+    driver: local

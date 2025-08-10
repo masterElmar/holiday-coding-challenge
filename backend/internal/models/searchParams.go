@@ -37,12 +37,12 @@ func (o *Offer) matchesDepartureAirports(airports []string) bool {
 
 // matchesEarliestDepartureDate prüft das früheste Abflugdatum
 func (o *Offer) matchesEarliestDepartureDate(earliestDate time.Time) bool {
-	return earliestDate.IsZero() || !o.OutboundDepartureDateTime.Before(earliestDate)
+	return earliestDate.IsZero() || !o.DepartureDate.Before(earliestDate)
 }
 
 // matchesLatestReturnDate prüft das späteste Rückflugdatum
 func (o *Offer) matchesLatestReturnDate(latestDate time.Time) bool {
-	return latestDate.IsZero() || !o.InboundDepartureDateTime.After(latestDate)
+	return latestDate.IsZero() || !o.ReturnDate.After(latestDate)
 }
 
 // matchesCountAdults prüft die Anzahl Erwachsene
