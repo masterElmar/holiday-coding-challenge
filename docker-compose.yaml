@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
   scylla:
     image: scylladb/scylla:6.1
