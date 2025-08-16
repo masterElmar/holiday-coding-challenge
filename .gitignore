@@ -7,3 +7,4 @@ offers.csv
 **/.vscode
 **/.idea
 *.csv
+data/offers.csv
