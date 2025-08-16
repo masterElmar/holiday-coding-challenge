@@ -6,3 +6,4 @@ node_modules
 offers.csv
 **/.vscode
 **/.idea
+*.csv

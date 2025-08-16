@@ -8,6 +8,7 @@ services:
       - "9180:9180"   # Metrics/REST
     volumes:
       - scylla-data:/var/lib/scylla
+      - ./backup:/backup
     healthcheck:
       test: ["CMD", "cqlsh", "-e", "DESCRIBE KEYSPACES"]
       interval: 10s
