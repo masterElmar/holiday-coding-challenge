@@ -15,11 +15,11 @@ import (
 
 // HotelHandler behandelt Hotel-bezogene API-Anfragen
 type HotelHandler struct {
-	storage *storage.MemoryStorage
+	storage storage.Storage
 }
 
 // NewHotelHandler erstellt einen neuen HotelHandler
-func NewHotelHandler(storage *storage.MemoryStorage) *HotelHandler {
+func NewHotelHandler(storage storage.Storage) *HotelHandler {
 	return &HotelHandler{
 		storage: storage,
 	}
@@ -143,7 +143,7 @@ func (h *HotelHandler) convertSearchParams(params models.ApiSearchParams) (model
 
 // GetHotelsWithBestOffers gibt Hotels mit ihren besten Angeboten zurück
 // GET /api/hotels?departureAirports=FRA,MUC&earliestDepartureDate=2025-08-10&latestReturnDate=2025-08-31&countAdults=2&countChildren=0&duration=7
-func (h *HotelHandler) GetHotelsWithBestOffers(c fiber.Ctx) error {
+func (h *HotelHandler) GetHotelsWithBestOffers(c *fiber.Ctx) error {
 	params, err := h.parseSearchParams(c)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -162,7 +162,7 @@ func (h *HotelHandler) GetHotelsWithBestOffers(c fiber.Ctx) error {
 
 // GetOffersByHotel gibt alle Angebote für ein bestimmtes Hotel zurück
 // GET /api/hotels/:id/offers?departureAirports=FRA&earliestDepartureDate=2025-08-10&latestReturnDate=2025-08-31&countAdults=2&countChildren=0&duration=7
-func (h *HotelHandler) GetOffersByHotel(c fiber.Ctx) error {
+func (h *HotelHandler) GetOffersByHotel(c *fiber.Ctx) error {
 	// Hotel-ID aus der URL extrahieren
 	hotelIDStr := c.Params("id")
 	hotelID, err := strconv.Atoi(hotelIDStr)
@@ -201,13 +201,13 @@ func (h *HotelHandler) GetOffersByHotel(c fiber.Ctx) error {
 
 // GetStats gibt Statistiken über die geladenen Daten zurück
 // GET /api/stats
-func (h *HotelHandler) GetStats(c fiber.Ctx) error {
+func (h *HotelHandler) GetStats(c *fiber.Ctx) error {
 	stats := h.storage.GetStats()
 	return c.JSON(stats)
 }
 
 // parseSearchParams parst die Such-Parameter aus der Query
-func (h *HotelHandler) parseSearchParams(c fiber.Ctx) (models.SearchParams, error) {
+func (h *HotelHandler) parseSearchParams(c *fiber.Ctx) (models.SearchParams, error) {
 	var params models.SearchParams
 
 	// Departure Airports (komma-getrennt)

@@ -2,32 +2,37 @@
 
 ## Umgebungsvariablen
 
-Erstelle eine `.env` Datei im Backend-Verzeichnis:
+Erstelle optional eine `.env` oder setze Umgebungsvariablen. Der Backend-Server nutzt ScyllaDB (gocql):
 
 ```env
-# Server Configuration
-PORT=8080
-LOG_LEVEL=info
-ENABLE_CORS=true
+# Server
+PORT=8090
 
-# Data Sources
-HOTELS_FILE_PATH=../data/hotels.csv
-OFFERS_FILE_PATH=../data/offers.csv
+# Datenquellen (CSV Fallback/Import)
+HOTELS_DATA_PATH=../data/hotels.csv
+OFFERS_DATA_PATH=../data/offers.csv
 
-# Performance Settings
-MAX_OFFERS_CACHED=1000000
+# Scylla
+SCYLLA_HOSTS=127.0.0.1
+SCYLLA_PORT=9042
+SCYLLA_KEYSPACE=holidays
+# optional
+# SCYLLA_USERNAME=
+# SCYLLA_PASSWORD=
+# SCYLLA_CONSISTENCY=QUORUM
+# SCYLLA_LOCAL_DC=
 ```
 
 ## Verfügbare Umgebungsvariablen
 
 | Variable | Beschreibung | Standard |
 |----------|--------------|----------|
-| `PORT` | Server Port | `8080` |
-| `HOTELS_FILE_PATH` | Pfad zur Hotels CSV Datei | `../data/hotels.csv` |
-| `OFFERS_FILE_PATH` | Pfad zur Angebote CSV Datei | `../data/offers.csv` |
-| `LOG_LEVEL` | Log Level (debug, info, warn, error) | `info` |
-| `ENABLE_CORS` | CORS aktivieren | `true` |
-| `MAX_OFFERS_CACHED` | Maximale Anzahl gecachter Angebote | `1000000` |
+| `PORT` | Server Port | `8090` |
+| `HOTELS_DATA_PATH` | Pfad Hotels CSV (für Initialimport) | `../data/hotels.csv` |
+| `OFFERS_DATA_PATH` | Pfad Offers CSV (für Import-Tool) | `../data/offers.csv` |
+| `SCYLLA_HOSTS` | Kommagetrennte Hosts | `127.0.0.1` |
+| `SCYLLA_PORT` | Port | `9042` |
+| `SCYLLA_KEYSPACE` | Keyspace | `holidays` |
 
 ## Installation
 
@@ -43,10 +48,19 @@ cd backend
 go run cmd/server/main.go
 ```
 
+Optional: Großes Offers-CSV nach Scylla importieren:
+
+```bash
+cd backend
+go run cmd/import-offers/main.go -offers ../data/offers.csv
+```
+
 ## Verfügbare Endpunkte
 
-- `GET /health` - Gesundheitsstatus und Statistiken
-- `GET /hotels` - Alle Hotels auflisten
+- `GET /api/health` - Gesundheitsstatus
+- `GET /api/stats` - Statistiken
+- `GET /bestOffersByHotel` - Beste (günstigste) Angebote je Hotel nach Suche
+- `GET /hotels/{id}/offers` - Alle Angebote für ein Hotel
 
 ## Datenstrukturen
 
