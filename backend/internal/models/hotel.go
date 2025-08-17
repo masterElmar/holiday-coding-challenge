@@ -54,3 +54,8 @@ type HotelOffersResponse struct {
 type StatsResponse struct {
 	Body map[string]interface{} `json:"stats"`
 }
+
+// AirportsResponse for Huma API
+type AirportsResponse struct {
+	Body []string `json:"airports"`
+}

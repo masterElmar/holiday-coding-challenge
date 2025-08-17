@@ -117,6 +117,16 @@ func main() {
 		Tags:        []string{"stats"},
 	}, hotelHandler.HumaGetStats)
 
+	// Airports
+	huma.Register(api, huma.Operation{
+		OperationID: "getAirports",
+		Method:      "GET",
+		Path:        "/api/airports",
+		Summary:     "Get available departure airports",
+		Description: "List unique outbound departure airport codes",
+		Tags:        []string{"airports"},
+	}, hotelHandler.HumaGetAirports)
+
 	// Health Check
 	app.Get("/api/health", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{
@@ -133,6 +143,7 @@ func main() {
 			"endpoints": []string{
 				"GET /api/health - Health Check",
 				"GET /api/stats - Datenstatistiken",
+				"GET /api/airports - Abflughäfen",
 				"GET /bestOffersByHotel - Beste Angebote je Hotel",
 				"GET /hotels/{id}/offers - Alle Angebote für ein Hotel",
 				"GET /docs - OpenAPI Documentation",

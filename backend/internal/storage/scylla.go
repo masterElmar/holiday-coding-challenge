@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -31,21 +32,7 @@ func NewScyllaSession() (*gocql.Session, error) {
 	cluster := gocql.NewCluster(strings.Split(hosts, ",")...)
 	cluster.Port = port
 	cluster.Keyspace = keyspace
-	cons := map[string]gocql.Consistency{
-		"ANY":          gocql.Any,
-		"ONE":          gocql.One,
-		"TWO":          gocql.Two,
-		"THREE":        gocql.Three,
-		"QUORUM":       gocql.Quorum,
-		"ALL":          gocql.All,
-		"LOCAL_QUORUM": gocql.LocalQuorum,
-		"EACH_QUORUM":  gocql.EachQuorum,
-		"LOCAL_ONE":    gocql.LocalOne,
-	}[consistencyEnv]
-	if cons == 0 && consistencyEnv != "ANY" { // fallback bei unbekanntem Wert
-		cons = gocql.Quorum
-	}
-	cluster.Consistency = cons
+	cluster.Consistency = parseConsistency(consistencyEnv)
 	cluster.ProtoVersion = 4
 	cluster.Timeout = 15 * time.Second
 	cluster.ConnectTimeout = 15 * time.Second
@@ -81,8 +68,7 @@ func getEnv(key, def string) string {
 
 func getEnvInt(key string, def int) int {
 	if v := os.Getenv(key); v != "" {
-		var n int
-		if _, err := fmt.Sscanf(v, "%d", &n); err == nil {
+		if n, err := strconv.Atoi(v); err == nil {
 			return n
 		}
 	}
@@ -96,6 +82,8 @@ type Storage interface {
 	GetHotel(hotelID int) (*models.Hotel, bool)
 	GetAllHotels() []models.Hotel
 	GetStats() map[string]interface{}
+	// GetAvailableDepartureAirports returns unique outbound departure airport codes across all offers
+	GetAvailableDepartureAirports() []string
 }
 
 // ScyllaStorage implements Storage backed by ScyllaDB.
@@ -141,40 +129,16 @@ func (s *ScyllaStorage) GetAllHotels() []models.Hotel {
 // GetOffersByHotel fetches offers for a hotel and applies filters client-side for non-key attrs
 func (s *ScyllaStorage) GetOffersByHotel(hotelID int, params models.SearchParams) []models.Offer {
 	// Base: partition by hotel, rely on clustering by price ASC
-	q := s.session.Query(`SELECT hotelid, outbounddeparturedatetime, inbounddeparturedatetime, countadults, countchildren, price, inbounddepartureairport, inboundarrivalairport, inboundarrivaldatetime, outbounddepartureairport, outboundarrivalairport, outboundarrivaldatetime, mealtype, oceanview, roomtype FROM offers WHERE hotelid = ?`, hotelID).Consistency(gocql.One)
-	iter := q.Iter()
+	iter := s.offersIterByHotel(hotelID)
 	var (
 		o   models.Offer
 		res []models.Offer
 	)
 	for {
-		var (
-			hotelid                                                                      int
-			outDep, inDep, inArr, outArr                                                 time.Time
-			ca, cc                                                                       int
-			price                                                                        float64
-			inDepAirport, inArrAirport, outDepAirport, outArrAirport, mealType, roomType string
-			oceanView                                                                    bool
-		)
-		if !iter.Scan(&hotelid, &outDep, &inDep, &ca, &cc, &price, &inDepAirport, &inArrAirport, &inArr, &outDepAirport, &outArrAirport, &outArr, &mealType, &oceanView, &roomType) {
+		var ok bool
+		o, ok = scanOffer(iter)
+		if !ok {
 			break
-		}
-		o = models.Offer{
-			HotelID:                  hotelid,
-			DepartureDate:            outDep,
-			ReturnDate:               inDep,
-			CountAdults:              ca,
-			CountChildren:            cc,
-			Price:                    price,
-			InboundDepartureAirport:  inDepAirport,
-			InboundArrivalAirport:    inArrAirport,
-			InboundArrivalDateTime:   inArr,
-			OutboundDepartureAirport: outDepAirport,
-			OutboundArrivalAirport:   outArrAirport,
-			OutboundArrivalDateTime:  outArr,
-			MealType:                 mealType,
-			OceanView:                oceanView,
-			RoomType:                 roomType,
 		}
 		// Apply all filters using existing model logic
 		if o.Matches(params) {
@@ -192,32 +156,11 @@ func (s *ScyllaStorage) GetHotelsWithBestOffers(params models.SearchParams) []mo
 	results := make([]models.HotelWithBestOffer, 0, len(hotels))
 	for _, h := range hotels {
 		// Scan partition ordered by price (clustering), stop at first match
-		iter := s.session.Query(`SELECT hotelid, outbounddeparturedatetime, inbounddeparturedatetime, countadults, countchildren, price, inbounddepartureairport, inboundarrivalairport, inboundarrivaldatetime, outbounddepartureairport, outboundarrivalairport, outboundarrivaldatetime, mealtype, oceanview, roomtype FROM offers WHERE hotelid = ?`, h.ID).Consistency(gocql.One).Iter()
-		var (
-			hotelid                                                                      int
-			outDep, inDep, inArr, outArr                                                 time.Time
-			ca, cc                                                                       int
-			price                                                                        float64
-			inDepAirport, inArrAirport, outDepAirport, outArrAirport, mealType, roomType string
-			oceanView                                                                    bool
-		)
-		for iter.Scan(&hotelid, &outDep, &inDep, &ca, &cc, &price, &inDepAirport, &inArrAirport, &inArr, &outDepAirport, &outArrAirport, &outArr, &mealType, &oceanView, &roomType) {
-			offer := models.Offer{
-				HotelID:                  hotelid,
-				DepartureDate:            outDep,
-				ReturnDate:               inDep,
-				CountAdults:              ca,
-				CountChildren:            cc,
-				Price:                    price,
-				InboundDepartureAirport:  inDepAirport,
-				InboundArrivalAirport:    inArrAirport,
-				InboundArrivalDateTime:   inArr,
-				OutboundDepartureAirport: outDepAirport,
-				OutboundArrivalAirport:   outArrAirport,
-				OutboundArrivalDateTime:  outArr,
-				MealType:                 mealType,
-				OceanView:                oceanView,
-				RoomType:                 roomType,
+		iter := s.offersIterByHotel(h.ID)
+		for {
+			offer, ok := scanOffer(iter)
+			if !ok {
+				break
 			}
 			if offer.Matches(params) {
 				results = append(results, models.HotelWithBestOffer{Hotel: h, BestOffer: &offer})
@@ -264,4 +207,99 @@ func (s *ScyllaStorage) GetStats() map[string]interface{} {
 	}
 	stats["hotels_with_offers"] = withOffers
 	return stats
+}
+
+// --- Helpers & small utilities ---
+
+// offersSelect encapsulates the commonly used offers projection
+const offersSelect = `SELECT hotelid, outbounddeparturedatetime, inbounddeparturedatetime, countadults, countchildren, price, inbounddepartureairport, inboundarrivalairport, inboundarrivaldatetime, outbounddepartureairport, outboundarrivalairport, outboundarrivaldatetime, mealtype, oceanview, roomtype FROM offers WHERE hotelid = ?`
+
+// offersIterByHotel creates an iterator over offers for a given hotel id with consistent settings
+func (s *ScyllaStorage) offersIterByHotel(hotelID int) *gocql.Iter {
+	return s.session.Query(offersSelect, hotelID).Consistency(gocql.One).Iter()
+}
+
+// GetAvailableDepartureAirports collects distinct outbound departure airport codes from all offers.
+// Implementation scans offers partition per hotel; acceptable for demo/small datasets.
+func (s *ScyllaStorage) GetAvailableDepartureAirports() []string {
+	hotels := s.GetAllHotels()
+	set := make(map[string]struct{})
+	for _, h := range hotels {
+		iter := s.offersIterByHotel(h.ID)
+		for {
+			offer, ok := scanOffer(iter)
+			if !ok {
+				break
+			}
+			if offer.OutboundDepartureAirport != "" {
+				set[offer.OutboundDepartureAirport] = struct{}{}
+			}
+		}
+		_ = iter.Close()
+	}
+	// to slice & sort
+	res := make([]string, 0, len(set))
+	for k := range set {
+		res = append(res, k)
+	}
+	sort.Strings(res)
+	return res
+}
+
+// scanOffer reads the next row from iter and converts it to models.Offer
+func scanOffer(iter *gocql.Iter) (models.Offer, bool) {
+	var (
+		hotelid                                                                      int
+		outDep, inDep, inArr, outArr                                                 time.Time
+		ca, cc                                                                       int
+		price                                                                        float64
+		inDepAirport, inArrAirport, outDepAirport, outArrAirport, mealType, roomType string
+		oceanView                                                                    bool
+	)
+	if !iter.Scan(&hotelid, &outDep, &inDep, &ca, &cc, &price, &inDepAirport, &inArrAirport, &inArr, &outDepAirport, &outArrAirport, &outArr, &mealType, &oceanView, &roomType) {
+		return models.Offer{}, false
+	}
+	return models.Offer{
+		HotelID:                  hotelid,
+		DepartureDate:            outDep,
+		ReturnDate:               inDep,
+		CountAdults:              ca,
+		CountChildren:            cc,
+		Price:                    price,
+		InboundDepartureAirport:  inDepAirport,
+		InboundArrivalAirport:    inArrAirport,
+		InboundArrivalDateTime:   inArr,
+		OutboundDepartureAirport: outDepAirport,
+		OutboundArrivalAirport:   outArrAirport,
+		OutboundArrivalDateTime:  outArr,
+		MealType:                 mealType,
+		OceanView:                oceanView,
+		RoomType:                 roomType,
+	}, true
+}
+
+// parseConsistency maps string to gocql.Consistency with sane default
+func parseConsistency(v string) gocql.Consistency {
+	switch strings.ToUpper(v) {
+	case "ANY":
+		return gocql.Any
+	case "ONE":
+		return gocql.One
+	case "TWO":
+		return gocql.Two
+	case "THREE":
+		return gocql.Three
+	case "QUORUM":
+		return gocql.Quorum
+	case "ALL":
+		return gocql.All
+	case "LOCAL_QUORUM":
+		return gocql.LocalQuorum
+	case "EACH_QUORUM":
+		return gocql.EachQuorum
+	case "LOCAL_ONE":
+		return gocql.LocalOne
+	default:
+		return gocql.Quorum
+	}
 }

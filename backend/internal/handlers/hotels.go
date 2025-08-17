@@ -96,6 +96,14 @@ func (h *HotelHandler) HumaGetStats(ctx context.Context, input *struct{}) (*mode
 	return resp, nil
 }
 
+// HumaGetAirports returns available outbound departure airports
+func (h *HotelHandler) HumaGetAirports(ctx context.Context, input *struct{}) (*models.AirportsResponse, error) {
+	airports := h.storage.GetAvailableDepartureAirports()
+	resp := &models.AirportsResponse{}
+	resp.Body = airports
+	return resp, nil
+}
+
 // convertSearchParams konvertiert Huma SearchParams zu models.SearchParams
 func (h *HotelHandler) convertSearchParams(params models.ApiSearchParams) (models.SearchParams, error) {
 	var result models.SearchParams

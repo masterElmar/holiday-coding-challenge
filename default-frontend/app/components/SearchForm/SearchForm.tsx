@@ -1,4 +1,4 @@
-import React, {ChangeEvent, useEffect, useState} from 'react';
+import React, {ChangeEvent, useEffect, useMemo, useState} from 'react';
 import './SearchForm.css';
 import {
     Box, Button,
@@ -21,15 +21,7 @@ type Properties = {
     submitCallback: (departureAirports: string[], countAdults: number, countChildren: number, duration: number, earliestDeparture: string, latestReturn: string) => Promise<void>
 }
 
-interface Airport {
-    code: string,
-    name: string
-}
-
-const availableDepartureAirports: Airport[] = [
-    {code: "MUC", name: "Munich"},
-    {code: "FRA", name: "Frankfurt"},
-]
+// Airports are loaded dynamically from backend. We only display the code for now.
 
 const ITEM_HEIGHT = 48;
 const ITEM_PADDING_TOP = 8;
@@ -45,6 +37,9 @@ const MenuProps = {
 
 export default function SearchForm({submitCallback}: Properties) {
     const [departureAirports, setDepartureAirports] = useState<string[]>([]);
+    const [availableDepartureAirports, setAvailableDepartureAirports] = useState<string[]>([]);
+    const [loadingAirports, setLoadingAirports] = useState<boolean>(false);
+    const [airportsError, setAirportsError] = useState<string | null>(null);
     const [countChildren, setCountChildren] = useState<number>(0);
     const [countAdults, setCountAdults] = useState<number>(0);
     const [duration, setDuration] = useState<number>(0);
@@ -63,6 +58,31 @@ export default function SearchForm({submitCallback}: Properties) {
         setEarliestDepartureDate(params.earliestDepartureDate ? dayjs(params.earliestDepartureDate) : null);
         setLatestReturnDate(params.latestReturnDate ? dayjs(params.latestReturnDate) : null);
     }, [query])
+
+    // Load airports once on mount
+    useEffect(() => {
+        const controller = new AbortController();
+        async function loadAirports() {
+            try {
+                setLoadingAirports(true);
+                setAirportsError(null);
+                const res = await fetch('http://localhost:8090/api/airports', {signal: controller.signal});
+                if (!res.ok) throw new Error(`Failed to load airports: ${res.status}`);
+                const data = await res.json();
+                // Huma wraps the body under { airports: [...] }
+                const items = (data?.airports ?? []) as string[];
+                setAvailableDepartureAirports(items);
+            } catch (e:any) {
+                if (e.name !== 'AbortError') {
+                    setAirportsError(e.message || 'Unbekannter Fehler');
+                }
+            } finally {
+                setLoadingAirports(false);
+            }
+        }
+        loadAirports();
+        return () => controller.abort();
+    }, [])
 
     const handleAirportChange = (event: SelectChangeEvent<typeof departureAirports>) => {
         const {target: {value}} = event;
@@ -98,10 +118,16 @@ export default function SearchForm({submitCallback}: Properties) {
                                     ))}
                                 </Box>
                             )}>
-                        {availableDepartureAirports.map((airport) => (
-                            <MenuItem key={airport.code} value={airport.code}>
-                                <Checkbox checked={departureAirports.indexOf(airport.code) > -1}/>
-                                <ListItemText primary={airport.code}/>
+                        {loadingAirports && (
+                            <MenuItem disabled>Loading airports…</MenuItem>
+                        )}
+                        {airportsError && (
+                            <MenuItem disabled>Error: {airportsError}</MenuItem>
+                        )}
+                        {!loadingAirports && !airportsError && availableDepartureAirports.map((code) => (
+                            <MenuItem key={code} value={code}>
+                                <Checkbox checked={departureAirports.indexOf(code) > -1}/>
+                                <ListItemText primary={code}/>
                             </MenuItem>
                         ))}
                     </Select>
