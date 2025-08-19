@@ -2,10 +2,12 @@ package storage
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"holiday-coding-challenge/backend/internal/models"
@@ -84,10 +86,26 @@ type Storage interface {
 // ScyllaStorage implements Storage backed by ScyllaDB.
 type ScyllaStorage struct {
 	session *gocql.Session
+
+	// airports cache
+	airportsCache      []string
+	airportsCacheAt    time.Time
+	airportsCacheTTL   time.Duration
+	airportsCacheMutex sync.RWMutex
 }
 
 func NewScyllaStorage(session *gocql.Session) *ScyllaStorage {
-	return &ScyllaStorage{session: session}
+	s := &ScyllaStorage{session: session}
+	// configure TTL via env, default 1h
+	ttl := getEnvInt("AIRPORTS_CACHE_TTL_MINUTES", 60)
+	s.airportsCacheTTL = time.Duration(ttl) * time.Minute
+	log.Printf("airports: cache TTL=%s, scan parallelism=%d", s.airportsCacheTTL, getEnvInt("AIRPORTS_SCAN_PARALLEL", 8))
+	// warm cache in background (non-blocking) on startup
+	log.Printf("airports: starting background warm-up")
+	go func() {
+		_ = s.refreshAirportsCache()
+	}()
+	return s
 }
 
 // GetHotel returns a hotel by ID
@@ -102,7 +120,7 @@ func (s *ScyllaStorage) GetHotel(hotelID int) (*models.Hotel, bool) {
 	return &h, true
 }
 
-// GetAllHotels returns all hotels (small table)
+// GetAllHotels returns all hotels distinct (small table)
 func (s *ScyllaStorage) GetAllHotels() []models.Hotel {
 	q := `SELECT hotelid, hotelname, hotelstars FROM hotels`
 	iter := s.session.Query(q).Consistency(gocql.One).Iter()
@@ -215,9 +233,110 @@ func (s *ScyllaStorage) offersIterByHotel(hotelID int) *gocql.Iter {
 }
 
 // GetAvailableDepartureAirports collects distinct outbound departure airport codes from all offers.
-// Implementation scans offers partition per hotel; acceptable for demo/small datasets.
+// Caches result in-memory with TTL and warms it on startup. Uses minimal projection and parallel scan per hotel.
 func (s *ScyllaStorage) GetAvailableDepartureAirports() []string {
+	// fast path: valid cache
+	s.airportsCacheMutex.RLock()
+	cached := s.airportsCache
+	cachedAt := s.airportsCacheAt
+	ttl := s.airportsCacheTTL
+	s.airportsCacheMutex.RUnlock()
+
+	if len(cached) > 0 && time.Since(cachedAt) < ttl {
+		// return a copy to avoid external mutation and ensure non-nil
+		out := make([]string, len(cached))
+		copy(out, cached)
+		return out
+	}
+
+	// refresh cache (synchronously for first call or expired)
+	if res := s.refreshAirportsCache(); len(res) > 0 {
+		return res
+	}
+	// fallback to previous cached slice (may be empty)
+	if len(cached) == 0 {
+		return []string{}
+	}
+	out := make([]string, len(cached))
+	copy(out, cached)
+	return out
+}
+
+// refreshAirportsCache recomputes the airports list and updates the cache. Returns the fresh list.
+func (s *ScyllaStorage) refreshAirportsCache() []string {
+	start := time.Now()
+	// gather hotels (small table)
 	hotels := s.GetAllHotels()
+	if len(hotels) == 0 {
+		log.Printf("airports: no hotels found; cache set empty (took %s)", time.Since(start))
+		s.airportsCacheMutex.Lock()
+		s.airportsCache = []string{}
+		s.airportsCacheAt = time.Now()
+		s.airportsCacheMutex.Unlock()
+		return []string{}
+	}
+
+	// parallel scan per hotel with bounded concurrency
+	maxParallel := getEnvInt("AIRPORTS_SCAN_PARALLEL", 8)
+	log.Printf("airports: refreshing cache; hotels=%d, parallel=%d", len(hotels), maxParallel)
+	sem := make(chan struct{}, maxParallel)
+	var wg sync.WaitGroup
+	set := make(map[string]struct{})
+	var mu sync.Mutex
+
+	// minimal projection: only the needed column
+	const q = `SELECT outbounddepartureairport FROM offers WHERE hotelid = ?`
+
+	usedFallback := false
+	for _, h := range hotels {
+		wg.Add(1)
+		sem <- struct{}{}
+		hotelID := h.ID
+		go func() {
+			defer wg.Done()
+			defer func() { <-sem }()
+			iter := s.session.Query(q, hotelID).Consistency(gocql.One).Iter()
+			var code string
+			for iter.Scan(&code) {
+				if code == "" {
+					continue
+				}
+				mu.Lock()
+				set[code] = struct{}{}
+				mu.Unlock()
+			}
+			_ = iter.Close()
+		}()
+	}
+	wg.Wait()
+
+	// to slice & sort
+	res := make([]string, 0, len(set))
+	for k := range set {
+		res = append(res, k)
+	}
+	// Fallback: if nothing found with minimal projection, do a full scan via offers iterator
+	if len(res) == 0 {
+		usedFallback = true
+		res = s.collectAirportsByScanningOffers(hotels)
+	}
+	sort.Strings(res)
+
+	// update cache
+	s.airportsCacheMutex.Lock()
+	s.airportsCache = res
+	s.airportsCacheAt = time.Now()
+	s.airportsCacheMutex.Unlock()
+	if usedFallback {
+		log.Printf("airports: cache ready in %s; airports=%d; usedFallback=true", time.Since(start), len(res))
+	} else {
+		log.Printf("airports: cache ready in %s; airports=%d", time.Since(start), len(res))
+	}
+	return res
+}
+
+// collectAirportsByScanningOffers falls back to reading full rows via scanOffer.
+func (s *ScyllaStorage) collectAirportsByScanningOffers(hotels []models.Hotel) []string {
 	set := make(map[string]struct{})
 	for _, h := range hotels {
 		iter := s.offersIterByHotel(h.ID)
@@ -232,13 +351,11 @@ func (s *ScyllaStorage) GetAvailableDepartureAirports() []string {
 		}
 		_ = iter.Close()
 	}
-	// to slice & sort
-	res := make([]string, 0, len(set))
+	out := make([]string, 0, len(set))
 	for k := range set {
-		res = append(res, k)
+		out = append(out, k)
 	}
-	sort.Strings(res)
-	return res
+	return out
 }
 
 // scanOffer reads the next row from iter and converts it to models.Offer

@@ -99,6 +99,10 @@ func (h *HotelHandler) HumaGetStats(ctx context.Context, input *struct{}) (*mode
 // HumaGetAirports returns available outbound departure airports
 func (h *HotelHandler) HumaGetAirports(ctx context.Context, input *struct{}) (*models.AirportsResponse, error) {
 	airports := h.storage.GetAvailableDepartureAirports()
+	// ensure non-nil slice so JSON encodes [] instead of null
+	if airports == nil {
+		airports = []string{}
+	}
 	resp := &models.AirportsResponse{}
 	resp.Body = airports
 	return resp, nil
