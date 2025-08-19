@@ -58,6 +58,32 @@ services:
   #     "cqlsh scylla 9042 -f /cql/load_offers.cql"
   #   restart: "no"
 
+  frontend:
+    build:
+      context: ./default-frontend
+      dockerfile: Dockerfile
+      target: dev
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: prod
+    depends_on:
+      scylla-init:
+        condition: service_completed_successfully
+    ports:
+      - "8090:8090"
+    environment:
+      - GO_ENV=production
+      - DATABASE_URL=scylla
+      - SCYLLA_HOSTS=scylla
+      - SCYLLA_KEYSPACE=holidays
+
 volumes:
   scylla-data:
     driver: local

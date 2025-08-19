@@ -14,13 +14,8 @@ import (
 )
 
 // NewScyllaSession creates a gocql session using env or provided parameters.
-// Env variables:
-// - SCYLLA_HOSTS (comma separated, default: 127.0.0.1)
-// - SCYLLA_PORT (default: 9042)
-// - SCYLLA_KEYSPACE (default: holidays)
-// - SCYLLA_USERNAME, SCYLLA_PASSWORD (optional)
 func NewScyllaSession() (*gocql.Session, error) {
-	hosts := getEnv("SCYLLA_HOSTS", "127.0.0.1")
+	hosts := getEnv("SCYLLA_HOSTS", "localhost")
 	port := getEnvInt("SCYLLA_PORT", 9042)
 	keyspace := getEnv("SCYLLA_KEYSPACE", "holidays")
 	username := os.Getenv("SCYLLA_USERNAME")
