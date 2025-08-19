@@ -1,0 +1,10 @@
+node_modules
+.next
+.vscode
+.idea
+*.exe
+offers.csv
+**/.vscode
+**/.idea
+*.csv
+data/offers.csv

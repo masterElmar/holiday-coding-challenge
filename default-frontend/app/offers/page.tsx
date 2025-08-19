@@ -18,7 +18,7 @@ export default function Page() {
     async function fetchData() {
         const parameters = GetHotelOffersFromQuery(query);
         console.log(parameters);
-        const api = new OpenAPIClientAxios({definition: 'http://localhost:8090/openapi', withServer: 0})
+        const api = new OpenAPIClientAxios({definition: 'http://localhost:8090/openapi.json', withServer: 0})
         const client = await api.init<Client>()
         const response = await client.GetHotelOffers(parameters)
         setHotelOffer(response.data)

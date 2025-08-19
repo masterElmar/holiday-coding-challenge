@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
   apimock:
     image: wiremock/wiremock
@@ -12,3 +10,13 @@ services:
     command:
       - -verbose
       - -global-response-templating
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dev
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
